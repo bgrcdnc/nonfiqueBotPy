@@ -1,11 +1,13 @@
-#https://discordapp.com/oauth2/authorize?client_id=402940444071297034&scope=bot&permissions=8
-
 import discord
 import asyncio
 from discord.ext.commands import Bot
 from discord.ext import commands
 import platform
 import random
+
+def token():
+	tokfile=open("token","r")
+	return tokfile.read()
 
 PREFIX = ">"
 
@@ -110,4 +112,4 @@ async def sil(ctx, *args):
 async def test(ctx, *args):
 	await client.say("Testing...")
 	
-client.run('NDAyOTQwNDQ0MDcxMjk3MDM0.DUADDw.8kTbxReIQpxss8ccQvCA9s42ac4')
+client.run(token())
