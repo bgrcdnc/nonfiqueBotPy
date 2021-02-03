@@ -1,115 +1,59 @@
 import discord
-import asyncio
-from discord.ext.commands import Bot
 from discord.ext import commands
-import platform
-import random
+import datetime
+from asyncio import sleep
 
 def token():
-	tokfile=open("token","r")
-	return tokfile.read()
+    tokenFile=open("token","r")
+    return tokenFile.read()
 
-PREFIX = ">"
+bot = commands.Bot(command_prefix='>', description="A bot by nfq#1781")
 
-client = Bot(description="Just a bot by nonfique#1781", command_prefix=PREFIX, pm_help = True)
+@bot.command(brief="Pings the bot", description="Pings the bot, bot replies with pong. Useful for checking if bot is alive")
+async def ping(ctx):
+    await ctx.send('pong :ping_pong:')
 
-@client.event
+@bot.command(brief="Shows server information", description="Shows the server information")
+async def serverinfo(ctx):
+    if isinstance(ctx.channel, discord.channel.DMChannel):
+        embed = discord.Embed(title="Error!", description=f"*{ctx.command}* command cannot be used in a DM", timestamp=datetime.datetime.utcnow(), color=discord.Color.red())
+        await ctx.send(embed=embed)
+        return
+
+    embed = discord.Embed(title=f"{ctx.guild.name}", description="", timestamp=datetime.datetime.utcnow(), color=discord.Color.blue())
+    embed.add_field(name="Server created at", value=f"{ctx.guild.created_at:%Y-%m-%d}")
+    embed.add_field(name="Server Owner", value=f"{ctx.guild.owner}")
+    embed.add_field(name="Server Region", value=f"{ctx.guild.region}".capitalize())
+    embed.add_field(name="Server ID", value=f"{ctx.guild.id}")
+    embed.set_thumbnail(url=f"{ctx.guild.icon_url}")
+
+    await ctx.send(embed=embed)
+
+@bot.command(brief="Shows user information", description="Shows user information. If a user is not provided in the args, message author is assumed.")
+async def userinfo(ctx, user: discord.Member = None):
+    if not user:
+        user = ctx.author
+
+    embed = discord.Embed(title=f"{user}", description="", timestamp=datetime.datetime.utcnow(), color=discord.Color.blue())
+    embed.add_field(name="User server nick", value=f"{user.nick}")
+    embed.add_field(name="User created at", value=f"{user.created_at:%Y-%m-%d}")
+    embed.add_field(name="User joined server at", value=f"{user.joined_at:%Y-%m-%d}")
+    embed.add_field(name="User top role", value=f"{user.top_role}")
+    embed.add_field(name="User ID", value=f"{user.id}")
+    embed.set_thumbnail(url=f"{user.avatar_url}")
+
+    await ctx.send(embed=embed)
+
+# Events
+@bot.event
 async def on_ready():
-	print('Logged in as '+client.user.name+' (ID:'+client.user.id+') | Connected to '+str(len(client.servers))+' servers | Connected to '+str(len(set(client.get_all_members())))+' users')
-	print('--------')
-	print('Current Discord.py Version: {} | Current Python Version: {}'.format(discord.__version__, platform.python_version()))
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="myself get coded"))
+    print(f"--------\nLogged in as {bot.user.name} (ID:{str(bot.user.id)}') | Connected to {len(bot.users)} users")
+    print("--------")
+    print(f"Current Discord.py Version: {discord.__version__}")
 
-@client.command(description='For when you wanna settle the score some other way')
-async def choose(*choices : str):
-    """Chooses between multiple choices."""
-    await client.say(random.choice(choices))
+@bot.listen()
+async def on_message(message):
+    return
 
-@client.command(help="pong", description="pong")
-async def ping(*args):
-	await client.say(":ping_pong: Pong!")
-
-@client.command(help="Says 'tamam'", description="Says 'tamam'", pass_context=True)
-async def tamam(ctx, *args):
-	await client.delete_message(ctx.message)
-	await client.say("tamam")
-
-@client.command(help = "Shows userid of the tagged user (see '" + PREFIX + "help userid' for usage)", description = PREFIX + "userid <user> | Shows userid of the tagged user")
-async def userid(*args):
-	if not args[0].startswith('<@!'):
-		return
-	userid = args[0]
-	await client.say(userid[3:-1])
-
-@client.command(help = "TODO afk command", description = PREFIX + "afk | will eventually be afk command")
-async def afk(*args):
-	await client.say("SOON :tm:")
-
-
-@client.command(help = "Deletes messages. (see '" + PREFIX + "help sil' for usage)", description = PREFIX + "sil <(int)number of messages> <user=None> | Deletes messages according to given arguments", pass_context=True)
-async def sil(ctx, *args):
-	WAIT_TIME = 2
-	msgorg = ctx.message
-	channel = msgorg.channel
-	msgs = [msgorg]
-	nom = 0
-	nom_e = False
-	user = None
-	if len(args) == 1:
-		try:
-			nom = int(args[0])
-		except ValueError:
-			nom_e = True
-	elif len(args) == 2:
-		try:
-			nom = int(args[0])
-		except ValueError:
-			nom_e = True
-		user = args[1]
-		user = user[3:-1]
-	if nom < 1 or nom_e == True:
-		await client.delete_message(msgorg)
-		msgout = await client.say('**>** **Error#1:** Number of messages to be deleted needs to be specified in the first argument as an *integer*')
-		await asyncio.sleep(WAIT_TIME)
-		await client.delete_message(msgout)
-		return
-	elif nom > 25:
-		nom = 25
-	counter = 0
-	async for msg in client.logs_from(channel, limit=25, before=msgorg):
-		if msg.author == client.user and msg.content.startswith('**>**'):
-			continue
-		if user is not None:
-			if type(user) is str:
-				if msg.author.id == user:
-					user = msg.author
-					msgs.append(msg)
-					counter+=1
-			else:
-				if msg.author == user:
-					msgs.append(msg)
-					counter+=1
-		else:
-			msgs.append(msg)
-			counter+=1
-		if(counter >= nom):
-			break
-	try:
-		await client.delete_messages(msgs)
-	except discord.errors.ClientException:
-		pass
-	if counter > 0:
-		output = '**>** **Success:** Deleted ' + str(counter) + ' messages'
-		if user is not None:
-			output += ' from **' + user.nick + '**'
-	else:
-		output = '**>** **Error#2:** Could not find any message to delete'
-		await client.delete_message(msgorg)
-	msgout = await client.say(output)
-	await asyncio.sleep(WAIT_TIME)
-	await client.delete_message(msgout)
-
-@client.command(help="test, really", description="test, really", pass_context=True)
-async def test(ctx, *args):
-	await client.say("Testing...")
-	
-client.run(token())
+bot.run(token())
